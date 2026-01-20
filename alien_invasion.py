@@ -1,7 +1,8 @@
 import sys
-import pygame 
+import pygame
 from settings import Settings
 from ship import Ship
+from bullet import Bullet
 
 class AlienInvasion:
     """Classe geral para gerenciar ativos e comportamento do jogo."""
@@ -11,39 +12,45 @@ class AlienInvasion:
         pygame.init()
         self.settings = Settings()
 
-        # Cria a janela do jogo
-        self.screen = pygame.display.set_mode(
-            (self.settings.screen_width, self.settings.screen_height)
-        )
+        # Tela cheia
+        self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+        self.settings.screen_width = self.screen.get_rect().width
+        self.settings.screen_height = self.screen.get_rect().height
         pygame.display.set_caption("Alien Invasion")
 
-        # Cria a nave
+        # Nave e projéteis
         self.ship = Ship(self)
+        self.bullets = pygame.sprite.Group()
 
-        # Relógio para controlar FPS
+        # Controle de FPS
         self.clock = pygame.time.Clock()
 
     def run_game(self):
         """Inicia o loop principal do jogo."""
         while True:
-            # Observa eventos de teclado e de mouse.
             self._check_events()
-            
-            # Atualiza a posição da nave
             self.ship.update()
-
-            # Atualiza a tela
+            self.bullets.update()
+            self._remove_offscreen_bullets()
             self._update_screen()
             self.clock.tick(60)
-    
+
+    def _remove_offscreen_bullets(self):
+        """Remove projéteis que saíram da tela."""
+        for bullet in self.bullets.copy():
+            if bullet.rect.bottom <= 0:
+                self.bullets.remove(bullet)
+
     def _update_screen(self):
-        """Atualiza as imagens na tela e alterna para a nova tela."""
+        """Atualiza as imagens na tela."""
         self.screen.fill(self.settings.bg_color)
         self.ship.blitme()
-        pygame.display.flip()   
+        for bullet in self.bullets.sprites():
+            bullet.draw_bullet()
+        pygame.display.flip()
 
     def _check_events(self):
-        """Responde a eventos de pressionamento de teclas e de mouse."""
+        """Responde a eventos de teclado."""
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 sys.exit()
@@ -58,6 +65,10 @@ class AlienInvasion:
             self.ship.moving_right = True
         elif event.key == pygame.K_LEFT:
             self.ship.moving_left = True
+        elif event.key == pygame.K_q:
+            sys.exit()
+        elif event.key == pygame.K_SPACE:
+            self._fire_bullet()
 
     def _check_keyup_events(self, event):
         """Responde a solturas de tecla."""
@@ -66,10 +77,13 @@ class AlienInvasion:
         elif event.key == pygame.K_LEFT:
             self.ship.moving_left = False
 
+    def _fire_bullet(self):
+        """Cria um novo projétil se o limite não foi atingido."""
+        if len(self.bullets) < self.settings.bullets_allowed:
+            new_bullet = Bullet(self)
+            self.bullets.add(new_bullet)
 
 if __name__ == '__main__':
-    # Cria uma instância e executa o jogo.
     ai = AlienInvasion()
     ai.run_game()
-
 
